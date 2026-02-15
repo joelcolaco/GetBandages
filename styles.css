@@ -39,12 +39,16 @@ h1 {
   opacity: 0.9;
 }
 
+.screen {
+  display: grid;
+  gap: 0.75rem;
+}
+
 canvas {
   width: 100%;
   height: auto;
   border: 2px solid #0c111a;
   border-radius: 10px;
-  background: linear-gradient(#8ad4ff 0 65%, #6abf5a 65% 100%);
   display: block;
 }
 
@@ -53,6 +57,16 @@ canvas {
   display: flex;
   align-items: center;
   justify-content: space-between;
+}
+
+.actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.actions.inline {
+  justify-content: flex-end;
 }
 
 button {
@@ -67,4 +81,36 @@ button {
 
 button:hover {
   filter: brightness(1.05);
+}
+
+button.secondary {
+  background: #9cb6cc;
+}
+
+.level-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 0.7rem;
+}
+
+.level-card {
+  display: grid;
+  gap: 0.2rem;
+  text-align: left;
+  min-height: 92px;
+}
+
+.level-card span,
+.level-card small {
+  color: #0a2131;
+}
+
+.level-card.completed {
+  background: #6ad18c;
+}
+
+.level-card:disabled {
+  cursor: not-allowed;
+  filter: grayscale(0.8);
+  opacity: 0.6;
 }
