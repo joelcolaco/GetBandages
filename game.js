@@ -2,12 +2,37 @@ const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
 const statusLabel = document.getElementById("status");
 const restartBtn = document.getElementById("restart");
+const themeToggleBtn = document.getElementById("theme-toggle");
 
 const keys = new Set();
 const WORLD = {
   gravity: 1800,
   speed: 280,
   jumpVelocity: 650
+};
+
+const themeSystem = window.PlatformerThemes || {
+  defaultTheme: "day",
+  names: ["day"],
+  getTheme: () => ({
+    skyTop: "#8ad4ff",
+    skyBottom: "#ccefff",
+    ground: "#53a94a",
+    platform: "#6b4f3a",
+    spikeBase: "#b23939",
+    spikeTip: "#e87070",
+    goal: "#2fa34b",
+    playerAlive: "#1f2835",
+    playerDead: "#666",
+    sunColor: "#ffd65c",
+    sunGlow: "rgba(255, 214, 92, 0.35)",
+    sun: { x: 110, y: 95, r: 42 }
+  })
+};
+
+const themeState = {
+  currentName: themeSystem.defaultTheme,
+  current: themeSystem.getTheme(themeSystem.defaultTheme)
 };
 
 const level = {
@@ -123,18 +148,40 @@ function drawRect(obj, color) {
 }
 
 function draw() {
+  const theme = themeState.current;
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-  ctx.fillStyle = "#53a94a";
+  const sky = ctx.createLinearGradient(0, 0, 0, level.floorY);
+  sky.addColorStop(0, theme.skyTop);
+  sky.addColorStop(1, theme.skyBottom);
+  ctx.fillStyle = sky;
+  ctx.fillRect(0, 0, canvas.width, level.floorY);
+
+  // Sun and subtle glow for consistent level atmosphere.
+  const { x, y, r } = theme.sun;
+  const glow = ctx.createRadialGradient(x, y, r * 0.2, x, y, r * 2);
+  glow.addColorStop(0, theme.sunGlow);
+  glow.addColorStop(1, "rgba(255, 214, 92, 0)");
+  ctx.fillStyle = glow;
+  ctx.beginPath();
+  ctx.arc(x, y, r * 2, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.fillStyle = theme.sunColor;
+  ctx.beginPath();
+  ctx.arc(x, y, r, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.fillStyle = theme.ground;
   ctx.fillRect(0, level.floorY, canvas.width, canvas.height - level.floorY);
 
   for (const p of level.platforms) {
-    drawRect(p, "#6b4f3a");
+    drawRect(p, theme.platform);
   }
 
   for (const s of level.spikes) {
-    drawRect(s, "#b23939");
-    ctx.fillStyle = "#e87070";
+    drawRect(s, theme.spikeBase);
+    ctx.fillStyle = theme.spikeTip;
     ctx.beginPath();
     ctx.moveTo(s.x + 5, s.y + s.h);
     ctx.lineTo(s.x + s.w / 2, s.y + 2);
@@ -142,12 +189,29 @@ function draw() {
     ctx.fill();
   }
 
-  drawRect(level.goal, "#2fa34b");
+  drawRect(level.goal, theme.goal);
 
-  drawRect(player, player.alive ? "#1f2835" : "#666");
+  drawRect(player, player.alive ? theme.playerAlive : theme.playerDead);
   ctx.fillStyle = "#fff";
   ctx.fillRect(player.x + 6, player.y + 8, 6, 6);
   ctx.fillRect(player.x + 17, player.y + 8, 6, 6);
+}
+
+function toTitleCase(value) {
+  return value.charAt(0).toUpperCase() + value.slice(1);
+}
+
+function applyTheme(name) {
+  themeState.currentName = name;
+  themeState.current = themeSystem.getTheme(name);
+  themeToggleBtn.textContent = `Theme: ${toTitleCase(name)}`;
+}
+
+function cycleTheme() {
+  const names = themeSystem.names || [themeState.currentName];
+  const currentIndex = names.indexOf(themeState.currentName);
+  const nextIndex = currentIndex >= 0 ? (currentIndex + 1) % names.length : 0;
+  applyTheme(names[nextIndex]);
 }
 
 let prev = performance.now();
@@ -175,6 +239,8 @@ window.addEventListener("keyup", (e) => {
   keys.delete(e.key);
 });
 restartBtn.addEventListener("click", reset);
+themeToggleBtn.addEventListener("click", cycleTheme);
 
 reset();
+applyTheme(themeState.currentName);
 requestAnimationFrame(loop);
