@@ -159,8 +159,21 @@ function loop(now) {
   requestAnimationFrame(loop);
 }
 
-window.addEventListener("keydown", (e) => keys.add(e.key));
-window.addEventListener("keyup", (e) => keys.delete(e.key));
+const gameplayKeys = new Set([" ", "ArrowUp", "ArrowLeft", "ArrowRight", "w", "W", "a", "A", "d", "D"]);
+
+window.addEventListener("keydown", (e) => {
+  if (gameplayKeys.has(e.key)) {
+    e.preventDefault();
+  }
+  keys.add(e.key);
+});
+
+window.addEventListener("keyup", (e) => {
+  if (gameplayKeys.has(e.key)) {
+    e.preventDefault();
+  }
+  keys.delete(e.key);
+});
 restartBtn.addEventListener("click", reset);
 
 reset();
