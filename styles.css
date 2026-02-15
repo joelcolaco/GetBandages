@@ -1,0 +1,70 @@
+:root {
+  --bg: #131820;
+  --panel: #1b2330;
+  --text: #e7edf5;
+  --accent: #4fc3f7;
+  --danger: #ff6b6b;
+  --goal: #56d364;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  background: radial-gradient(circle at top, #22314a, var(--bg));
+  color: var(--text);
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.layout {
+  width: min(980px, 95vw);
+  padding: 1rem;
+  border-radius: 14px;
+  background: color-mix(in hsl, var(--panel), black 10%);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.35);
+}
+
+h1 {
+  margin: 0 0 0.3rem;
+  font-size: 1.4rem;
+}
+
+.help {
+  margin: 0 0 0.75rem;
+  opacity: 0.9;
+}
+
+canvas {
+  width: 100%;
+  height: auto;
+  border: 2px solid #0c111a;
+  border-radius: 10px;
+  background: linear-gradient(#8ad4ff 0 65%, #6abf5a 65% 100%);
+  display: block;
+}
+
+.hud {
+  margin-top: 0.7rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+button {
+  border: 0;
+  border-radius: 8px;
+  padding: 0.45rem 0.8rem;
+  color: #051016;
+  background: var(--accent);
+  cursor: pointer;
+  font-weight: 600;
+}
+
+button:hover {
+  filter: brightness(1.05);
+}
