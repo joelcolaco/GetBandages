@@ -50,6 +50,7 @@
         startY: enemy.y,
         direction: 1
       }));
+      this.configureEnemyPatrols();
     }
 
     start() {
@@ -87,6 +88,7 @@
         enemy.y = enemy.startY;
         enemy.direction = 1;
       }
+      this.configureEnemyPatrols();
       this.setStatus("Status: Running");
     }
 
@@ -279,15 +281,108 @@
       for (const enemy of this.enemies) {
         if (enemy.pattern === "patrol-x") {
           enemy.x += enemy.direction * (enemy.speed || 80) * dt;
-          if (enemy.x <= enemy.minX) {
-            enemy.x = enemy.minX;
+          if (enemy.x <= enemy.patrolMinX) {
+            enemy.x = enemy.patrolMinX;
             enemy.direction = 1;
-          } else if (enemy.x + enemy.w >= enemy.maxX) {
-            enemy.x = enemy.maxX - enemy.w;
+          } else if (enemy.x + enemy.w >= enemy.patrolMaxX) {
+            enemy.x = enemy.patrolMaxX - enemy.w;
             enemy.direction = -1;
           }
         }
       }
+    }
+
+    configureEnemyPatrols() {
+      for (const enemy of this.enemies) {
+        const support = this.findEnemySupport(enemy);
+        const explicitMinX = Number.isFinite(enemy.minX) ? enemy.minX : null;
+        const explicitMaxX = Number.isFinite(enemy.maxX) ? enemy.maxX : null;
+
+        let patrolMinX = explicitMinX ?? 0;
+        let patrolMaxX = explicitMaxX ?? this.worldWidth;
+
+        if (support) {
+          patrolMinX = Math.max(patrolMinX, support.minX);
+          patrolMaxX = Math.min(patrolMaxX, support.maxX);
+          enemy.y = support.y;
+        }
+
+        if (support && support.type === "ground") {
+          const limits = this.getGroundSpikeLimits(enemy, patrolMinX, patrolMaxX);
+          patrolMinX = limits.minX;
+          patrolMaxX = limits.maxX;
+        }
+
+        if (patrolMaxX - patrolMinX < enemy.w) {
+          patrolMinX = support ? support.minX : Math.max(0, enemy.startX);
+          patrolMaxX = support ? support.maxX : Math.min(this.worldWidth, enemy.startX + enemy.w);
+          if (patrolMaxX - patrolMinX < enemy.w) {
+            patrolMaxX = patrolMinX + enemy.w;
+          }
+        }
+
+        enemy.patrolMinX = patrolMinX;
+        enemy.patrolMaxX = patrolMaxX;
+        enemy.x = clamp(enemy.x, enemy.patrolMinX, enemy.patrolMaxX - enemy.w);
+      }
+    }
+
+    findEnemySupport(enemy) {
+      const tolerance = 4;
+      const enemyBottom = enemy.y + enemy.h;
+      let bestPlatform = null;
+      let bestOverlap = 0;
+
+      for (const platform of this.level.platforms) {
+        if (Math.abs(enemyBottom - platform.y) > tolerance) continue;
+        const overlapWidth =
+          Math.min(enemy.x + enemy.w, platform.x + platform.w) - Math.max(enemy.x, platform.x);
+        if (overlapWidth > bestOverlap) {
+          bestOverlap = overlapWidth;
+          bestPlatform = platform;
+        }
+      }
+
+      if (bestPlatform) {
+        return {
+          type: "platform",
+          minX: bestPlatform.x,
+          maxX: bestPlatform.x + bestPlatform.w,
+          y: bestPlatform.y - enemy.h
+        };
+      }
+
+      if (Math.abs(enemyBottom - this.level.floorY) <= tolerance) {
+        return {
+          type: "ground",
+          minX: 0,
+          maxX: this.worldWidth,
+          y: this.level.floorY - enemy.h
+        };
+      }
+
+      return null;
+    }
+
+    getGroundSpikeLimits(enemy, minX, maxX) {
+      let leftLimit = minX;
+      let rightLimit = maxX;
+      const startLeft = enemy.startX;
+      const startRight = enemy.startX + enemy.w;
+
+      for (const spike of this.level.spikes || []) {
+        if (spike.y > this.level.floorY) continue;
+
+        if (spike.x + spike.w <= startLeft) {
+          leftLimit = Math.max(leftLimit, spike.x + spike.w);
+        } else if (spike.x >= startRight) {
+          rightLimit = Math.min(rightLimit, spike.x);
+        } else {
+          leftLimit = Math.max(leftLimit, spike.x + spike.w);
+        }
+      }
+
+      return { minX: leftLimit, maxX: rightLimit };
     }
   }
 
