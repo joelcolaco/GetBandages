@@ -1,13 +1,23 @@
 (() => {
+  function setLayoutMenuMode(root, isMenu) {
+    const layout = root.closest(".layout");
+    if (!layout) return;
+    layout.classList.toggle("menu-active", Boolean(isMenu));
+  }
+
   function renderMainMenu(root, options) {
+    setLayoutMenuMode(root, true);
     root.innerHTML = `
-      <section class="screen">
-        <h2>Main Menu</h2>
-        <p class="help">A simple platformer with level progression.</p>
-        <div class="actions">
-          <button id="start-game" type="button">Start Game</button>
-          <button id="open-level-select" type="button">Level Select</button>
-          <button id="reset-progress" type="button" class="secondary">Reset Progress</button>
+      <section class="screen menu-screen">
+        <div class="menu-card">
+          <p class="menu-kicker">Arcade Platformer</p>
+          <h1 class="menu-title">Get Bandages</h1>
+          <p class="menu-tagline">Run, jump, and patch your way through every level.</p>
+          <div class="actions menu-actions">
+            <button id="start-game" type="button">Start Game</button>
+            <button id="open-level-select" type="button">Level Select</button>
+            <button id="reset-progress" type="button" class="secondary">Reset Progress</button>
+          </div>
         </div>
       </section>
     `;
@@ -18,6 +28,7 @@
   }
 
   function renderLevelSelect(root, levels, progressStore, progress, options) {
+    setLayoutMenuMode(root, false);
     const cards = levels.map((level, index) => {
       const unlocked = progressStore.isUnlocked(progress, index);
       const completed = progressStore.isCompleted(progress, level.id);
@@ -53,6 +64,7 @@
   }
 
   function renderGameScreen(root, level, themeName, options) {
+    setLayoutMenuMode(root, false);
     root.innerHTML = `
       <section class="screen">
         <h2>${level.name}</h2>
