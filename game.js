@@ -6,6 +6,7 @@
   };
 
   const gameplayKeys = new Set([" ", "ArrowUp", "ArrowLeft", "ArrowRight", "w", "W", "a", "A", "d", "D"]);
+  const SHARED_SPRITES = createSpriteSet();
 
   class PlatformerGameEngine {
     constructor(options) {
@@ -38,8 +39,10 @@
         vy: 0,
         onGround: false,
         alive: true,
-        won: false
+        won: false,
+        facing: 1
       };
+      this.sprites = SHARED_SPRITES;
 
       this.boundKeyDown = (e) => this.handleKeyDown(e);
       this.boundKeyUp = (e) => this.handleKeyUp(e);
@@ -80,6 +83,7 @@
       this.player.onGround = false;
       this.player.alive = true;
       this.player.won = false;
+      this.player.facing = 1;
       this.hasWon = false;
       this.hasLost = false;
       this.cameraX = 0;
@@ -150,6 +154,8 @@
       const jump = this.keys.has(" ") || this.keys.has("ArrowUp") || this.keys.has("w") || this.keys.has("W");
 
       this.player.vx = ((right ? 1 : 0) - (left ? 1 : 0)) * WORLD.speed;
+      if (this.player.vx > 0) this.player.facing = 1;
+      if (this.player.vx < 0) this.player.facing = -1;
       if (jump && this.player.onGround) {
         this.player.vy = -WORLD.jumpVelocity;
         this.player.onGround = false;
@@ -227,54 +233,84 @@
       const ctx = this.ctx;
       ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
 
-      const sky = ctx.createLinearGradient(0, 0, 0, this.level.floorY);
-      sky.addColorStop(0, theme.skyTop);
-      sky.addColorStop(1, theme.skyBottom);
-      ctx.fillStyle = sky;
-      ctx.fillRect(0, 0, this.canvas.width, this.level.floorY);
+      const bgImage = this.themeName === "night" ? this.sprites.backgroundNight : this.sprites.backgroundDay;
+      if (isImageReady(bgImage)) {
+        ctx.drawImage(bgImage, 0, 0, this.canvas.width, this.canvas.height);
+      } else {
+        const sky = ctx.createLinearGradient(0, 0, 0, this.level.floorY);
+        sky.addColorStop(0, theme.skyTop);
+        sky.addColorStop(1, theme.skyBottom);
+        ctx.fillStyle = sky;
+        ctx.fillRect(0, 0, this.canvas.width, this.level.floorY);
 
-      const { x, y, r } = theme.sun;
-      const glow = ctx.createRadialGradient(x, y, r * 0.2, x, y, r * 2);
-      glow.addColorStop(0, theme.sunGlow);
-      glow.addColorStop(1, "rgba(255, 214, 92, 0)");
-      ctx.fillStyle = glow;
-      ctx.beginPath();
-      ctx.arc(x, y, r * 2, 0, Math.PI * 2);
-      ctx.fill();
-
-      ctx.fillStyle = theme.sunColor;
-      ctx.beginPath();
-      ctx.arc(x, y, r, 0, Math.PI * 2);
-      ctx.fill();
-
-      drawRect(ctx, { x: -this.cameraX, y: this.level.floorY, w: this.worldWidth, h: this.canvas.height - this.level.floorY }, theme.ground);
-
-      for (const platform of this.level.platforms) {
-        drawWorldRect(ctx, platform, theme.platform, this.cameraX);
-      }
-
-      for (const spike of this.level.spikes) {
-        drawWorldRect(ctx, spike, theme.spikeBase, this.cameraX);
-        ctx.fillStyle = theme.spikeTip;
+        const { x, y, r } = theme.sun;
+        const glow = ctx.createRadialGradient(x, y, r * 0.2, x, y, r * 2);
+        glow.addColorStop(0, theme.sunGlow);
+        glow.addColorStop(1, "rgba(255, 214, 92, 0)");
+        ctx.fillStyle = glow;
         ctx.beginPath();
-        ctx.moveTo(spike.x - this.cameraX + 5, spike.y + spike.h);
-        ctx.lineTo(spike.x - this.cameraX + spike.w / 2, spike.y + 2);
-        ctx.lineTo(spike.x - this.cameraX + spike.w - 5, spike.y + spike.h);
+        ctx.arc(x, y, r * 2, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = theme.sunColor;
+        ctx.beginPath();
+        ctx.arc(x, y, r, 0, Math.PI * 2);
         ctx.fill();
       }
 
-      for (const enemy of this.enemies) {
-        drawWorldRect(ctx, enemy, "#d26a1f", this.cameraX);
-        ctx.fillStyle = "#fff";
-        ctx.fillRect(enemy.x - this.cameraX + 7, enemy.y + 8, 5, 5);
-        ctx.fillRect(enemy.x - this.cameraX + 18, enemy.y + 8, 5, 5);
+      const groundRect = { x: 0, y: this.level.floorY, w: this.worldWidth, h: this.canvas.height - this.level.floorY };
+      if (!drawWorldTiledImage(ctx, this.sprites.groundTile, groundRect, this.cameraX)) {
+        drawRect(ctx, { x: -this.cameraX, y: this.level.floorY, w: this.worldWidth, h: this.canvas.height - this.level.floorY }, theme.ground);
       }
 
-      drawWorldRect(ctx, this.level.goal, theme.goal, this.cameraX);
-      drawWorldRect(ctx, this.player, this.player.alive ? theme.playerAlive : theme.playerDead, this.cameraX);
-      ctx.fillStyle = "#fff";
-      ctx.fillRect(this.player.x - this.cameraX + 6, this.player.y + 8, 6, 6);
-      ctx.fillRect(this.player.x - this.cameraX + 17, this.player.y + 8, 6, 6);
+      for (const platform of this.level.platforms) {
+        if (!drawWorldTiledImage(ctx, this.sprites.platformTile, platform, this.cameraX)) {
+          drawWorldRect(ctx, platform, theme.platform, this.cameraX);
+        }
+      }
+
+      for (const spike of this.level.spikes) {
+        if (isImageReady(this.sprites.spike)) {
+          drawWorldImage(ctx, this.sprites.spike, spike, this.cameraX);
+        } else {
+          drawWorldRect(ctx, spike, theme.spikeBase, this.cameraX);
+          ctx.fillStyle = theme.spikeTip;
+          ctx.beginPath();
+          ctx.moveTo(spike.x - this.cameraX + 5, spike.y + spike.h);
+          ctx.lineTo(spike.x - this.cameraX + spike.w / 2, spike.y + 2);
+          ctx.lineTo(spike.x - this.cameraX + spike.w - 5, spike.y + spike.h);
+          ctx.fill();
+        }
+      }
+
+      const enemyFrame = Math.floor(performance.now() / 220) % this.sprites.enemySlime.length;
+      for (const enemy of this.enemies) {
+        const enemyImage = this.sprites.enemySlime[enemyFrame];
+        if (isImageReady(enemyImage)) {
+          drawWorldImage(ctx, enemyImage, enemy, this.cameraX, { flipX: enemy.direction < 0 });
+        } else {
+          drawWorldRect(ctx, enemy, "#d26a1f", this.cameraX);
+          ctx.fillStyle = "#fff";
+          ctx.fillRect(enemy.x - this.cameraX + 7, enemy.y + 8, 5, 5);
+          ctx.fillRect(enemy.x - this.cameraX + 18, enemy.y + 8, 5, 5);
+        }
+      }
+
+      if (isImageReady(this.sprites.goalFlag)) {
+        drawWorldImage(ctx, this.sprites.goalFlag, this.level.goal, this.cameraX);
+      } else {
+        drawWorldRect(ctx, this.level.goal, theme.goal, this.cameraX);
+      }
+
+      const playerSprite = this.getPlayerSprite();
+      if (isImageReady(playerSprite)) {
+        drawWorldImage(ctx, playerSprite, this.player, this.cameraX, { flipX: this.player.facing < 0 });
+      } else {
+        drawWorldRect(ctx, this.player, this.player.alive ? theme.playerAlive : theme.playerDead, this.cameraX);
+        ctx.fillStyle = "#fff";
+        ctx.fillRect(this.player.x - this.cameraX + 6, this.player.y + 8, 6, 6);
+        ctx.fillRect(this.player.x - this.cameraX + 17, this.player.y + 8, 6, 6);
+      }
     }
 
     updateEnemies(dt) {
@@ -384,6 +420,16 @@
 
       return { minX: leftLimit, maxX: rightLimit };
     }
+
+    getPlayerSprite() {
+      if (!this.player.alive) return this.sprites.playerDead;
+      if (!this.player.onGround) return this.sprites.playerJump;
+      if (Math.abs(this.player.vx) > 15) {
+        const frame = Math.floor(performance.now() / 140) % this.sprites.playerRun.length;
+        return this.sprites.playerRun[frame];
+      }
+      return this.sprites.playerIdle;
+    }
   }
 
   function overlap(a, b) {
@@ -398,6 +444,80 @@
   function drawWorldRect(ctx, obj, color, cameraX) {
     ctx.fillStyle = color;
     ctx.fillRect(obj.x - cameraX, obj.y, obj.w, obj.h);
+  }
+
+  function drawWorldImage(ctx, image, obj, cameraX, options = {}) {
+    const x = obj.x - cameraX;
+    if (!options.flipX) {
+      ctx.drawImage(image, x, obj.y, obj.w, obj.h);
+      return;
+    }
+
+    ctx.save();
+    ctx.translate(x + obj.w, 0);
+    ctx.scale(-1, 1);
+    ctx.drawImage(image, 0, obj.y, obj.w, obj.h);
+    ctx.restore();
+  }
+
+  function drawWorldTiledImage(ctx, image, rect, cameraX) {
+    if (!isImageReady(image) || rect.w <= 0 || rect.h <= 0) {
+      return false;
+    }
+
+    const tileW = image.naturalWidth || image.width || 32;
+    const tileH = image.naturalHeight || image.height || 32;
+    const startX = Math.floor(rect.x / tileW) * tileW;
+    const startY = Math.floor(rect.y / tileH) * tileH;
+    const endX = rect.x + rect.w;
+    const endY = rect.y + rect.h;
+
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(rect.x - cameraX, rect.y, rect.w, rect.h);
+    ctx.clip();
+
+    for (let y = startY; y < endY; y += tileH) {
+      for (let x = startX; x < endX; x += tileW) {
+        ctx.drawImage(image, x - cameraX, y, tileW, tileH);
+      }
+    }
+
+    ctx.restore();
+    return true;
+  }
+
+  function loadImage(src) {
+    const image = new Image();
+    image.decoding = "async";
+    image.src = src;
+    return image;
+  }
+
+  function isImageReady(image) {
+    return Boolean(image && image.complete && image.naturalWidth > 0);
+  }
+
+  function createSpriteSet() {
+    return {
+      backgroundDay: loadImage("assets/bg/day-sky.svg"),
+      backgroundNight: loadImage("assets/bg/night-sky.svg"),
+      groundTile: loadImage("assets/tiles/ground.svg"),
+      platformTile: loadImage("assets/tiles/platform.svg"),
+      spike: loadImage("assets/hazards/spike.svg"),
+      goalFlag: loadImage("assets/props/goal-flag.svg"),
+      playerIdle: loadImage("assets/player/player-idle.svg"),
+      playerRun: [
+        loadImage("assets/player/player-run-1.svg"),
+        loadImage("assets/player/player-run-2.svg")
+      ],
+      playerJump: loadImage("assets/player/player-jump.svg"),
+      playerDead: loadImage("assets/player/player-dead.svg"),
+      enemySlime: [
+        loadImage("assets/enemies/slime-1.svg"),
+        loadImage("assets/enemies/slime-2.svg")
+      ]
+    };
   }
 
   function clamp(value, min, max) {

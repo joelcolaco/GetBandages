@@ -1,0 +1,26 @@
+﻿<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 540" width="960" height="540">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#101936"/>
+      <stop offset="100%" stop-color="#314a77"/>
+    </linearGradient>
+    <linearGradient id="hillA" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#365f45"/>
+      <stop offset="100%" stop-color="#274934"/>
+    </linearGradient>
+    <linearGradient id="hillB" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#2f5741"/>
+      <stop offset="100%" stop-color="#1f3f2c"/>
+    </linearGradient>
+  </defs>
+  <rect width="960" height="540" fill="url(#sky)"/>
+  <circle cx="120" cy="90" r="34" fill="#edf3ff"/>
+  <circle cx="660" cy="90" r="2" fill="#eef4ff"/>
+  <circle cx="700" cy="140" r="1.5" fill="#eef4ff"/>
+  <circle cx="740" cy="62" r="1.5" fill="#eef4ff"/>
+  <circle cx="800" cy="120" r="2" fill="#eef4ff"/>
+  <circle cx="860" cy="80" r="1.5" fill="#eef4ff"/>
+  <ellipse cx="220" cy="445" rx="320" ry="105" fill="url(#hillA)"/>
+  <ellipse cx="730" cy="438" rx="350" ry="125" fill="url(#hillB)"/>
+  <rect x="0" y="470" width="960" height="70" fill="#3e6d42"/>
+</svg>

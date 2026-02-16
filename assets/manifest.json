@@ -1,0 +1,35 @@
+﻿{
+  "backgrounds": {
+    "day": "assets/bg/day-sky.svg",
+    "night": "assets/bg/night-sky.svg"
+  },
+  "tiles": {
+    "ground": "assets/tiles/ground.svg",
+    "platform": "assets/tiles/platform.svg"
+  },
+  "hazards": {
+    "spike": "assets/hazards/spike.svg"
+  },
+  "player": {
+    "idle": "assets/player/player-idle.svg",
+    "run": [
+      "assets/player/player-run-1.svg",
+      "assets/player/player-run-2.svg"
+    ],
+    "jump": "assets/player/player-jump.svg",
+    "dead": "assets/player/player-dead.svg"
+  },
+  "enemies": {
+    "slime": [
+      "assets/enemies/slime-1.svg",
+      "assets/enemies/slime-2.svg"
+    ]
+  },
+  "props": {
+    "goalFlag": "assets/props/goal-flag.svg"
+  },
+  "ui": {
+    "bandage": "assets/ui/bandage-icon.svg",
+    "heart": "assets/ui/heart.svg"
+  }
+}
