@@ -100,6 +100,54 @@ canvas {
   display: block;
 }
 
+.game-shell {
+  position: relative;
+}
+
+.outcome-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+  background: rgba(7, 11, 18, 0.7);
+  backdrop-filter: blur(5px);
+}
+
+.outcome-overlay.hidden {
+  display: none;
+}
+
+.outcome-card {
+  width: min(560px, 92vw);
+  border-radius: 18px;
+  border: 1px solid rgba(157, 191, 231, 0.24);
+  background: linear-gradient(180deg, #15263b 0%, #0f1a2a 100%);
+  box-shadow: 0 22px 44px rgba(0, 0, 0, 0.48);
+  padding: 1.4rem 1.2rem;
+  display: grid;
+  gap: 0.65rem;
+}
+
+.outcome-kicker {
+  margin: 0;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  font-size: 0.75rem;
+  color: #90d4ff;
+}
+
+.outcome-title {
+  margin: 0;
+  font-size: clamp(1.4rem, 4.8vw, 2rem);
+}
+
+.outcome-message {
+  margin: 0 0 0.35rem;
+  opacity: 0.9;
+}
+
 .hud {
   margin-top: 0.7rem;
   display: flex;

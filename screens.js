@@ -5,8 +5,13 @@
     layout.classList.toggle("menu-active", Boolean(isMenu));
   }
 
-  function renderMainMenu(root, options) {
+  function renderMainMenu(root, options = {}) {
     setLayoutMenuMode(root, true);
+    const debugMode = Boolean(options.debugMode);
+    const resetProgressAction = debugMode
+      ? `<button id="reset-progress" type="button" class="secondary">Reset Progress</button>`
+      : "";
+
     root.innerHTML = `
       <section class="screen menu-screen">
         <div class="menu-card">
@@ -16,7 +21,7 @@
           <div class="actions menu-actions">
             <button id="start-game" type="button">Start Game</button>
             <button id="open-level-select" type="button">Level Select</button>
-            <button id="reset-progress" type="button" class="secondary">Reset Progress</button>
+            ${resetProgressAction}
           </div>
         </div>
       </section>
@@ -24,7 +29,10 @@
 
     root.querySelector("#start-game").addEventListener("click", options.onStartGame);
     root.querySelector("#open-level-select").addEventListener("click", options.onOpenLevelSelect);
-    root.querySelector("#reset-progress").addEventListener("click", options.onResetProgress);
+    const resetButton = root.querySelector("#reset-progress");
+    if (resetButton) {
+      resetButton.addEventListener("click", options.onResetProgress);
+    }
   }
 
   function renderLevelSelect(root, levels, progressStore, progress, options) {
@@ -63,32 +71,67 @@
     root.querySelector("#back-main").addEventListener("click", options.onBack);
   }
 
-  function renderGameScreen(root, level, themeName, options) {
+  function renderGameScreen(root, level, themeName, options = {}) {
     setLayoutMenuMode(root, false);
+    const debugMode = Boolean(options.debugMode);
+    const debugControls = debugMode ? `
+      <button id="theme-toggle" type="button">Theme: ${toTitleCase(themeName)}</button>
+      <button id="restart" type="button" class="secondary">Restart</button>
+    ` : "";
+
     root.innerHTML = `
       <section class="screen">
         <h2>${level.name}</h2>
         <p class="help">Move: A / D or Arrow Keys. Jump: W / Space / Arrow Up.</p>
-        <canvas id="game" width="960" height="540" aria-label="Platformer game"></canvas>
+        <div class="game-shell">
+          <canvas id="game" width="960" height="540" aria-label="Platformer game"></canvas>
+          <section id="outcome-overlay" class="outcome-overlay hidden" aria-live="polite">
+            <div class="outcome-card">
+              <p id="outcome-kicker" class="outcome-kicker"></p>
+              <h3 id="outcome-title" class="outcome-title"></h3>
+              <p id="outcome-message" class="outcome-message"></p>
+              <div class="actions">
+                <button id="outcome-primary" type="button"></button>
+                <button id="outcome-secondary" type="button" class="secondary">Level Select</button>
+              </div>
+            </div>
+          </section>
+        </div>
         <div class="hud">
           <span id="status">Status: Running</span>
           <div class="actions inline">
-            <button id="theme-toggle" type="button">Theme: ${toTitleCase(themeName)}</button>
-            <button id="restart" type="button" class="secondary">Restart</button>
+            ${debugControls}
             <button id="back-levels" type="button" class="secondary">Levels</button>
           </div>
         </div>
       </section>
     `;
 
-    root.querySelector("#restart").addEventListener("click", options.onRestart);
-    root.querySelector("#theme-toggle").addEventListener("click", options.onToggleTheme);
+    const restartButton = root.querySelector("#restart");
+    const themeToggleButton = root.querySelector("#theme-toggle");
+    if (restartButton) {
+      restartButton.addEventListener("click", options.onRestart);
+    }
+    if (themeToggleButton) {
+      themeToggleButton.addEventListener("click", options.onToggleTheme);
+    }
     root.querySelector("#back-levels").addEventListener("click", options.onBackToLevels);
+    root.querySelector("#outcome-primary").addEventListener("click", () => {
+      if (typeof options.onOutcomePrimary === "function") {
+        options.onOutcomePrimary();
+      }
+    });
+    root.querySelector("#outcome-secondary").addEventListener("click", options.onBackToLevels);
 
     return {
       canvas: root.querySelector("#game"),
       statusLabel: root.querySelector("#status"),
-      themeToggleButton: root.querySelector("#theme-toggle")
+      themeToggleButton,
+      outcomeOverlay: root.querySelector("#outcome-overlay"),
+      outcomeKicker: root.querySelector("#outcome-kicker"),
+      outcomeTitle: root.querySelector("#outcome-title"),
+      outcomeMessage: root.querySelector("#outcome-message"),
+      outcomePrimaryButton: root.querySelector("#outcome-primary")
     };
   }
 

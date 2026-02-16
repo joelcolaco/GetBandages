@@ -13,6 +13,7 @@
       this.ctx = this.canvas.getContext("2d");
       this.statusLabel = options.statusLabel;
       this.onWin = options.onWin || (() => {});
+      this.onLose = options.onLose || (() => {});
 
       this.themeSystem = window.PlatformerThemes;
       this.level = options.level;
@@ -22,6 +23,7 @@
       this.keys = new Set();
       this.running = false;
       this.hasWon = false;
+      this.hasLost = false;
       this.prev = 0;
       this.frameHandle = 0;
 
@@ -69,6 +71,7 @@
       this.player.alive = true;
       this.player.won = false;
       this.hasWon = false;
+      this.hasLost = false;
       this.setStatus("Status: Running");
     }
 
@@ -168,6 +171,10 @@
         if (overlap(this.player, s)) {
           this.player.alive = false;
           this.setStatus("Status: You hit spikes. Press Restart.");
+          if (!this.hasLost) {
+            this.hasLost = true;
+            this.onLose(this.level.id);
+          }
           return;
         }
       }
