@@ -19,6 +19,8 @@
       this.level = options.level;
       this.themeName = options.themeName || options.level.theme || this.themeSystem.defaultTheme;
       this.theme = this.themeSystem.getTheme(this.themeName);
+      this.worldWidth = this.level.width || this.canvas.width;
+      this.cameraX = 0;
 
       this.keys = new Set();
       this.running = false;
@@ -41,6 +43,13 @@
 
       this.boundKeyDown = (e) => this.handleKeyDown(e);
       this.boundKeyUp = (e) => this.handleKeyUp(e);
+
+      this.enemies = (this.level.enemies || []).map((enemy) => ({
+        ...enemy,
+        startX: enemy.x,
+        startY: enemy.y,
+        direction: 1
+      }));
     }
 
     start() {
@@ -72,6 +81,12 @@
       this.player.won = false;
       this.hasWon = false;
       this.hasLost = false;
+      this.cameraX = 0;
+      for (const enemy of this.enemies) {
+        enemy.x = enemy.startX;
+        enemy.y = enemy.startY;
+        enemy.direction = 1;
+      }
       this.setStatus("Status: Running");
     }
 
@@ -142,7 +157,7 @@
       this.player.x += this.player.vx * dt;
 
       if (this.player.x < 0) this.player.x = 0;
-      if (this.player.x + this.player.w > this.canvas.width) this.player.x = this.canvas.width - this.player.w;
+      if (this.player.x + this.player.w > this.worldWidth) this.player.x = this.worldWidth - this.player.w;
 
       this.player.y += this.player.vy * dt;
       this.player.onGround = false;
@@ -179,6 +194,19 @@
         }
       }
 
+      this.updateEnemies(dt);
+      for (const enemy of this.enemies) {
+        if (overlap(this.player, enemy)) {
+          this.player.alive = false;
+          this.setStatus("Status: You hit an enemy. Try again.");
+          if (!this.hasLost) {
+            this.hasLost = true;
+            this.onLose(this.level.id);
+          }
+          return;
+        }
+      }
+
       if (overlap(this.player, this.level.goal)) {
         this.player.won = true;
         this.setStatus("Status: Level complete! Return to Levels.");
@@ -187,6 +215,9 @@
           this.onWin(this.level.id);
         }
       }
+
+      const targetCamera = this.player.x + this.player.w / 2 - this.canvas.width / 2;
+      this.cameraX = clamp(targetCamera, 0, Math.max(0, this.worldWidth - this.canvas.width));
     }
 
     draw() {
@@ -214,27 +245,49 @@
       ctx.arc(x, y, r, 0, Math.PI * 2);
       ctx.fill();
 
-      drawRect(ctx, { x: 0, y: this.level.floorY, w: this.canvas.width, h: this.canvas.height - this.level.floorY }, theme.ground);
+      drawRect(ctx, { x: -this.cameraX, y: this.level.floorY, w: this.worldWidth, h: this.canvas.height - this.level.floorY }, theme.ground);
 
       for (const platform of this.level.platforms) {
-        drawRect(ctx, platform, theme.platform);
+        drawWorldRect(ctx, platform, theme.platform, this.cameraX);
       }
 
       for (const spike of this.level.spikes) {
-        drawRect(ctx, spike, theme.spikeBase);
+        drawWorldRect(ctx, spike, theme.spikeBase, this.cameraX);
         ctx.fillStyle = theme.spikeTip;
         ctx.beginPath();
-        ctx.moveTo(spike.x + 5, spike.y + spike.h);
-        ctx.lineTo(spike.x + spike.w / 2, spike.y + 2);
-        ctx.lineTo(spike.x + spike.w - 5, spike.y + spike.h);
+        ctx.moveTo(spike.x - this.cameraX + 5, spike.y + spike.h);
+        ctx.lineTo(spike.x - this.cameraX + spike.w / 2, spike.y + 2);
+        ctx.lineTo(spike.x - this.cameraX + spike.w - 5, spike.y + spike.h);
         ctx.fill();
       }
 
-      drawRect(ctx, this.level.goal, theme.goal);
-      drawRect(ctx, this.player, this.player.alive ? theme.playerAlive : theme.playerDead);
+      for (const enemy of this.enemies) {
+        drawWorldRect(ctx, enemy, "#d26a1f", this.cameraX);
+        ctx.fillStyle = "#fff";
+        ctx.fillRect(enemy.x - this.cameraX + 7, enemy.y + 8, 5, 5);
+        ctx.fillRect(enemy.x - this.cameraX + 18, enemy.y + 8, 5, 5);
+      }
+
+      drawWorldRect(ctx, this.level.goal, theme.goal, this.cameraX);
+      drawWorldRect(ctx, this.player, this.player.alive ? theme.playerAlive : theme.playerDead, this.cameraX);
       ctx.fillStyle = "#fff";
-      ctx.fillRect(this.player.x + 6, this.player.y + 8, 6, 6);
-      ctx.fillRect(this.player.x + 17, this.player.y + 8, 6, 6);
+      ctx.fillRect(this.player.x - this.cameraX + 6, this.player.y + 8, 6, 6);
+      ctx.fillRect(this.player.x - this.cameraX + 17, this.player.y + 8, 6, 6);
+    }
+
+    updateEnemies(dt) {
+      for (const enemy of this.enemies) {
+        if (enemy.pattern === "patrol-x") {
+          enemy.x += enemy.direction * (enemy.speed || 80) * dt;
+          if (enemy.x <= enemy.minX) {
+            enemy.x = enemy.minX;
+            enemy.direction = 1;
+          } else if (enemy.x + enemy.w >= enemy.maxX) {
+            enemy.x = enemy.maxX - enemy.w;
+            enemy.direction = -1;
+          }
+        }
+      }
     }
   }
 
@@ -245,6 +298,15 @@
   function drawRect(ctx, obj, color) {
     ctx.fillStyle = color;
     ctx.fillRect(obj.x, obj.y, obj.w, obj.h);
+  }
+
+  function drawWorldRect(ctx, obj, color, cameraX) {
+    ctx.fillStyle = color;
+    ctx.fillRect(obj.x - cameraX, obj.y, obj.w, obj.h);
+  }
+
+  function clamp(value, min, max) {
+    return Math.max(min, Math.min(max, value));
   }
 
   window.PlatformerGameEngine = PlatformerGameEngine;
