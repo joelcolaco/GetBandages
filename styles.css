@@ -175,6 +175,21 @@ canvas {
   justify-content: flex-end;
 }
 
+.touch-controls {
+  display: none;
+}
+
+.touch-button {
+  touch-action: none;
+  user-select: none;
+  min-width: 86px;
+}
+
+.touch-button.pressed {
+  filter: brightness(0.9);
+  transform: translateY(1px);
+}
+
 button {
   border: 0;
   border-radius: 10px;
@@ -237,5 +252,39 @@ button.secondary {
   .menu-card {
     min-height: 430px;
     padding: 1.3rem 1rem;
+  }
+
+  .hud {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 0.55rem;
+  }
+
+  .actions.inline {
+    justify-content: flex-start;
+  }
+}
+
+@media (pointer: coarse), (max-width: 900px) {
+  .layout {
+    width: min(980px, 100vw);
+    border-radius: 0;
+  }
+
+  .touch-controls {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1.3fr;
+    gap: 0.55rem;
+    margin-top: 0.25rem;
+  }
+
+  .touch-controls .jump {
+    justify-self: stretch;
+  }
+
+  .touch-button {
+    min-height: 52px;
+    font-size: 1rem;
+    padding: 0.75rem 0.8rem;
   }
 }

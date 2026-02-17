@@ -74,15 +74,26 @@
   function renderGameScreen(root, level, themeName, options = {}) {
     setLayoutMenuMode(root, false);
     const debugMode = Boolean(options.debugMode);
+    const mobileMode = Boolean(options.mobileMode);
     const debugControls = debugMode ? `
       <button id="theme-toggle" type="button">Theme: ${toTitleCase(themeName)}</button>
       <button id="restart" type="button" class="secondary">Restart</button>
     ` : "";
+    const mobileControls = mobileMode ? `
+      <div class="touch-controls" aria-label="Touch controls">
+        <button id="touch-left" type="button" class="touch-button" aria-label="Move left">Left</button>
+        <button id="touch-right" type="button" class="touch-button" aria-label="Move right">Right</button>
+        <button id="touch-jump" type="button" class="touch-button jump" aria-label="Jump">Jump</button>
+      </div>
+    ` : "";
+    const helpText = mobileMode
+      ? "Move with on-screen buttons (or keyboard). Jump with Jump, W, Space, or Arrow Up."
+      : "Move: A / D or Arrow Keys. Jump: W / Space / Arrow Up.";
 
     root.innerHTML = `
       <section class="screen">
         <h2>${level.name}</h2>
-        <p class="help">Move: A / D or Arrow Keys. Jump: W / Space / Arrow Up.</p>
+        <p class="help">${helpText}</p>
         <div class="game-shell">
           <canvas id="game" width="960" height="540" aria-label="Platformer game"></canvas>
           <section id="outcome-overlay" class="outcome-overlay hidden" aria-live="polite">
@@ -104,6 +115,7 @@
             <button id="back-levels" type="button" class="secondary">Levels</button>
           </div>
         </div>
+        ${mobileControls}
       </section>
     `;
 
@@ -127,6 +139,11 @@
       canvas: root.querySelector("#game"),
       statusLabel: root.querySelector("#status"),
       themeToggleButton,
+      touchControls: {
+        left: root.querySelector("#touch-left"),
+        right: root.querySelector("#touch-right"),
+        jump: root.querySelector("#touch-jump")
+      },
       outcomeOverlay: root.querySelector("#outcome-overlay"),
       outcomeKicker: root.querySelector("#outcome-kicker"),
       outcomeTitle: root.querySelector("#outcome-title"),

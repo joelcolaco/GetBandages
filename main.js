@@ -46,6 +46,7 @@
     let outcomePrimaryAction = null;
     const ui = screens.renderGameScreen(app, level, level.theme, {
       debugMode: DEBUG_MODE,
+      mobileMode: isMobileMode(),
       onRestart: () => {
         if (!engine) return;
         engine.reset();
@@ -126,6 +127,7 @@
     });
 
     engine.reset();
+    bindMobileControls(ui, engine);
     hideOutcome();
     if (ui.themeToggleButton) {
       ui.themeToggleButton.textContent = `Theme: ${screens.toTitleCase(engine.getThemeName())}`;
@@ -151,6 +153,58 @@
     } catch (err) {
       return false;
     }
+  }
+
+  function isMobileMode() {
+    const coarsePointer = window.matchMedia ? window.matchMedia("(pointer: coarse)").matches : false;
+    const smallViewport = window.innerWidth <= 900;
+    const touchCapable = navigator.maxTouchPoints > 0;
+    return coarsePointer || (touchCapable && smallViewport);
+  }
+
+  function bindMobileControls(ui, activeEngine) {
+    if (!ui.touchControls || !activeEngine) {
+      return;
+    }
+
+    const buttonByControl = {
+      left: ui.touchControls.left,
+      right: ui.touchControls.right,
+      jump: ui.touchControls.jump
+    };
+
+    const bindControl = (controlName) => {
+      const button = buttonByControl[controlName];
+      if (!button) {
+        return;
+      }
+
+      button.addEventListener("pointerdown", (event) => {
+        event.preventDefault();
+        if (button.setPointerCapture) {
+          button.setPointerCapture(event.pointerId);
+        }
+        activeEngine.setVirtualInput(controlName, true);
+        button.classList.add("pressed");
+      });
+
+      const release = (event) => {
+        event.preventDefault();
+        if (button.releasePointerCapture && button.hasPointerCapture && button.hasPointerCapture(event.pointerId)) {
+          button.releasePointerCapture(event.pointerId);
+        }
+        activeEngine.setVirtualInput(controlName, false);
+        button.classList.remove("pressed");
+      };
+
+      button.addEventListener("pointerup", release);
+      button.addEventListener("pointercancel", release);
+      button.addEventListener("pointerleave", release);
+    };
+
+    bindControl("left");
+    bindControl("right");
+    bindControl("jump");
   }
 
   showMainMenu();

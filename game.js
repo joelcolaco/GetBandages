@@ -12,6 +12,8 @@
     constructor(options) {
       this.canvas = options.canvas;
       this.ctx = this.canvas.getContext("2d");
+      this.viewportWidth = options.viewportWidth || this.canvas.width || 960;
+      this.viewportHeight = options.viewportHeight || this.canvas.height || 540;
       this.statusLabel = options.statusLabel;
       this.onWin = options.onWin || (() => {});
       this.onLose = options.onLose || (() => {});
@@ -20,10 +22,15 @@
       this.level = options.level;
       this.themeName = options.themeName || options.level.theme || this.themeSystem.defaultTheme;
       this.theme = this.themeSystem.getTheme(this.themeName);
-      this.worldWidth = this.level.width || this.canvas.width;
+      this.worldWidth = this.level.width || this.viewportWidth;
       this.cameraX = 0;
 
       this.keys = new Set();
+      this.virtualInput = {
+        left: false,
+        right: false,
+        jump: false
+      };
       this.running = false;
       this.hasWon = false;
       this.hasLost = false;
@@ -46,6 +53,7 @@
 
       this.boundKeyDown = (e) => this.handleKeyDown(e);
       this.boundKeyUp = (e) => this.handleKeyUp(e);
+      this.boundViewportChange = () => this.syncCanvasResolution();
 
       this.enemies = (this.level.enemies || []).map((enemy) => ({
         ...enemy,
@@ -55,6 +63,7 @@
         direction: 1
       }));
       this.configureEnemyPatrols();
+      this.syncCanvasResolution();
     }
 
     start() {
@@ -64,6 +73,9 @@
       this.running = true;
       window.addEventListener("keydown", this.boundKeyDown);
       window.addEventListener("keyup", this.boundKeyUp);
+      window.addEventListener("resize", this.boundViewportChange);
+      window.addEventListener("orientationchange", this.boundViewportChange);
+      this.syncCanvasResolution();
       this.prev = performance.now();
       this.frameHandle = requestAnimationFrame((now) => this.loop(now));
     }
@@ -73,7 +85,10 @@
       cancelAnimationFrame(this.frameHandle);
       window.removeEventListener("keydown", this.boundKeyDown);
       window.removeEventListener("keyup", this.boundKeyUp);
+      window.removeEventListener("resize", this.boundViewportChange);
+      window.removeEventListener("orientationchange", this.boundViewportChange);
       this.keys.clear();
+      this.clearVirtualInput();
     }
 
     reset() {
@@ -88,6 +103,7 @@
       this.hasWon = false;
       this.hasLost = false;
       this.cameraX = 0;
+      this.clearVirtualInput();
       for (const enemy of this.enemies) {
         enemy.x = enemy.startX;
         enemy.y = enemy.startY;
@@ -112,6 +128,19 @@
 
     getThemeName() {
       return this.themeName;
+    }
+
+    setVirtualInput(controlName, isPressed) {
+      if (!(controlName in this.virtualInput)) {
+        return;
+      }
+      this.virtualInput[controlName] = Boolean(isPressed);
+    }
+
+    clearVirtualInput() {
+      this.virtualInput.left = false;
+      this.virtualInput.right = false;
+      this.virtualInput.jump = false;
     }
 
     setStatus(text) {
@@ -150,9 +179,9 @@
         return;
       }
 
-      const left = this.keys.has("ArrowLeft") || this.keys.has("a") || this.keys.has("A");
-      const right = this.keys.has("ArrowRight") || this.keys.has("d") || this.keys.has("D");
-      const jump = this.keys.has(" ") || this.keys.has("ArrowUp") || this.keys.has("w") || this.keys.has("W");
+      const left = this.virtualInput.left || this.keys.has("ArrowLeft") || this.keys.has("a") || this.keys.has("A");
+      const right = this.virtualInput.right || this.keys.has("ArrowRight") || this.keys.has("d") || this.keys.has("D");
+      const jump = this.virtualInput.jump || this.keys.has(" ") || this.keys.has("ArrowUp") || this.keys.has("w") || this.keys.has("W");
 
       this.player.vx = ((right ? 1 : 0) - (left ? 1 : 0)) * WORLD.speed;
       if (this.player.vx > 0) this.player.facing = 1;
@@ -236,24 +265,24 @@
         }
       }
 
-      const targetCamera = this.player.x + this.player.w / 2 - this.canvas.width / 2;
-      this.cameraX = clamp(targetCamera, 0, Math.max(0, this.worldWidth - this.canvas.width));
+      const targetCamera = this.player.x + this.player.w / 2 - this.viewportWidth / 2;
+      this.cameraX = clamp(targetCamera, 0, Math.max(0, this.worldWidth - this.viewportWidth));
     }
 
     draw() {
       const theme = this.theme;
       const ctx = this.ctx;
-      ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+      ctx.clearRect(0, 0, this.viewportWidth, this.viewportHeight);
 
       const bgImage = this.themeName === "night" ? this.sprites.backgroundNight : this.sprites.backgroundDay;
       if (isImageReady(bgImage)) {
-        ctx.drawImage(bgImage, 0, 0, this.canvas.width, this.canvas.height);
+        ctx.drawImage(bgImage, 0, 0, this.viewportWidth, this.viewportHeight);
       } else {
         const sky = ctx.createLinearGradient(0, 0, 0, this.level.floorY);
         sky.addColorStop(0, theme.skyTop);
         sky.addColorStop(1, theme.skyBottom);
         ctx.fillStyle = sky;
-        ctx.fillRect(0, 0, this.canvas.width, this.level.floorY);
+        ctx.fillRect(0, 0, this.viewportWidth, this.level.floorY);
 
         const { x, y, r } = theme.sun;
         const glow = ctx.createRadialGradient(x, y, r * 0.2, x, y, r * 2);
@@ -270,9 +299,9 @@
         ctx.fill();
       }
 
-      const groundRect = { x: 0, y: this.level.floorY, w: this.worldWidth, h: this.canvas.height - this.level.floorY };
+      const groundRect = { x: 0, y: this.level.floorY, w: this.worldWidth, h: this.viewportHeight - this.level.floorY };
       if (!drawWorldTiledImage(ctx, this.sprites.groundTile, groundRect, this.cameraX)) {
-        drawRect(ctx, { x: -this.cameraX, y: this.level.floorY, w: this.worldWidth, h: this.canvas.height - this.level.floorY }, theme.ground);
+        drawRect(ctx, { x: -this.cameraX, y: this.level.floorY, w: this.worldWidth, h: this.viewportHeight - this.level.floorY }, theme.ground);
       }
 
       for (const platform of this.level.platforms) {
@@ -441,6 +470,20 @@
         return this.sprites.playerRun[frame];
       }
       return this.sprites.playerIdle;
+    }
+
+    syncCanvasResolution() {
+      const dpr = clamp(window.devicePixelRatio || 1, 1, 3);
+      const pixelWidth = Math.round(this.viewportWidth * dpr);
+      const pixelHeight = Math.round(this.viewportHeight * dpr);
+
+      if (this.canvas.width !== pixelWidth || this.canvas.height !== pixelHeight) {
+        this.canvas.width = pixelWidth;
+        this.canvas.height = pixelHeight;
+      }
+
+      this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      this.ctx.imageSmoothingEnabled = true;
     }
   }
 
