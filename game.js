@@ -49,6 +49,7 @@
 
       this.enemies = (this.level.enemies || []).map((enemy) => ({
         ...enemy,
+        stompable: enemy.stompable !== false,
         startX: enemy.x,
         startY: enemy.y,
         direction: 1
@@ -203,16 +204,27 @@
       }
 
       this.updateEnemies(dt);
-      for (const enemy of this.enemies) {
-        if (overlap(this.player, enemy)) {
-          this.player.alive = false;
-          this.setStatus("Status: You hit an enemy. Try again.");
-          if (!this.hasLost) {
-            this.hasLost = true;
-            this.onLose(this.level.id);
-          }
-          return;
+      for (let i = this.enemies.length - 1; i >= 0; i -= 1) {
+        const enemy = this.enemies[i];
+        if (!overlap(this.player, enemy)) continue;
+
+        const previousBottom = this.player.y + this.player.h - this.player.vy * dt;
+        const stompedFromAbove = previousBottom <= enemy.y + 6 && this.player.vy > 0;
+        if (stompedFromAbove && enemy.stompable) {
+          this.player.y = enemy.y - this.player.h;
+          this.player.vy = -WORLD.jumpVelocity * 0.5;
+          this.player.onGround = false;
+          this.enemies.splice(i, 1);
+          continue;
         }
+
+        this.player.alive = false;
+        this.setStatus("Status: You hit an enemy. Try again.");
+        if (!this.hasLost) {
+          this.hasLost = true;
+          this.onLose(this.level.id);
+        }
+        return;
       }
 
       if (overlap(this.player, this.level.goal)) {
