@@ -4,8 +4,10 @@
   const progressStore = window.PlatformerProgressStore;
   const screens = window.PlatformerScreens;
   const DEBUG_MODE = isDebugModeEnabled();
+  const TOUCH_MODE_STORAGE_KEY = "platformerTouchControlsEnabled";
   let progress = progressStore.load(levels);
   let engine = null;
+  let touchControlsEnabled = loadTouchControlsPreference();
 
   function showMainMenu() {
     stopActiveEngine();
@@ -46,11 +48,16 @@
     let outcomePrimaryAction = null;
     const ui = screens.renderGameScreen(app, level, level.theme, {
       debugMode: DEBUG_MODE,
-      mobileMode: isMobileMode(),
+      touchEnabled: touchControlsEnabled,
       onRestart: () => {
         if (!engine) return;
         engine.reset();
         hideOutcome();
+      },
+      onToggleControlsMode: () => {
+        touchControlsEnabled = !touchControlsEnabled;
+        saveTouchControlsPreference(touchControlsEnabled);
+        applyTouchControlsMode(ui, engine, touchControlsEnabled);
       },
       onToggleTheme: () => {
         if (!engine) return;
@@ -128,6 +135,7 @@
 
     engine.reset();
     bindMobileControls(ui, engine);
+    applyTouchControlsMode(ui, engine, touchControlsEnabled);
     hideOutcome();
     if (ui.themeToggleButton) {
       ui.themeToggleButton.textContent = `Theme: ${screens.toTitleCase(engine.getThemeName())}`;
@@ -155,11 +163,48 @@
     }
   }
 
-  function isMobileMode() {
+  function shouldAutoEnableTouchControls() {
     const coarsePointer = window.matchMedia ? window.matchMedia("(pointer: coarse)").matches : false;
     const smallViewport = window.innerWidth <= 900;
     const touchCapable = navigator.maxTouchPoints > 0;
     return coarsePointer || (touchCapable && smallViewport);
+  }
+
+  function loadTouchControlsPreference() {
+    try {
+      const stored = localStorage.getItem(TOUCH_MODE_STORAGE_KEY);
+      if (stored === "1") return true;
+      if (stored === "0") return false;
+    } catch (err) {
+      // ignore and fall back to auto detection
+    }
+    return shouldAutoEnableTouchControls();
+  }
+
+  function saveTouchControlsPreference(enabled) {
+    try {
+      localStorage.setItem(TOUCH_MODE_STORAGE_KEY, enabled ? "1" : "0");
+    } catch (err) {
+      // ignore storage errors
+    }
+  }
+
+  function applyTouchControlsMode(ui, activeEngine, enabled) {
+    if (!ui) return;
+    if (ui.touchControlsRoot) {
+      ui.touchControlsRoot.classList.toggle("touch-controls-hidden", !enabled);
+    }
+    if (ui.controlsModeToggleButton) {
+      ui.controlsModeToggleButton.textContent = enabled ? "Controls: Touch" : "Controls: Keyboard";
+    }
+    if (ui.helpLabel) {
+      ui.helpLabel.textContent = enabled
+        ? "Move with on-screen buttons (or keyboard). Jump with Jump, W, Space, or Arrow Up."
+        : "Move: A / D or Arrow Keys. Jump: W / Space / Arrow Up.";
+    }
+    if (!enabled && activeEngine) {
+      activeEngine.clearVirtualInput();
+    }
   }
 
   function bindMobileControls(ui, activeEngine) {

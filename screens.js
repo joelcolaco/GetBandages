@@ -74,21 +74,15 @@
   function renderGameScreen(root, level, themeName, options = {}) {
     setLayoutMenuMode(root, false);
     const debugMode = Boolean(options.debugMode);
-    const mobileMode = Boolean(options.mobileMode);
+    const touchEnabled = Boolean(options.touchEnabled);
     const debugControls = debugMode ? `
       <button id="theme-toggle" type="button">Theme: ${toTitleCase(themeName)}</button>
       <button id="restart" type="button" class="secondary">Restart</button>
     ` : "";
-    const mobileControls = mobileMode ? `
-      <div class="touch-controls" aria-label="Touch controls">
-        <button id="touch-left" type="button" class="touch-button" aria-label="Move left">Left</button>
-        <button id="touch-right" type="button" class="touch-button" aria-label="Move right">Right</button>
-        <button id="touch-jump" type="button" class="touch-button jump" aria-label="Jump">Jump</button>
-      </div>
-    ` : "";
-    const helpText = mobileMode
+    const helpText = touchEnabled
       ? "Move with on-screen buttons (or keyboard). Jump with Jump, W, Space, or Arrow Up."
       : "Move: A / D or Arrow Keys. Jump: W / Space / Arrow Up.";
+    const touchModeLabel = touchEnabled ? "Controls: Touch" : "Controls: Keyboard";
 
     root.innerHTML = `
       <section class="screen">
@@ -112,10 +106,15 @@
           <span id="status">Status: Running</span>
           <div class="actions inline">
             ${debugControls}
+            <button id="controls-mode-toggle" type="button" class="secondary">${touchModeLabel}</button>
             <button id="back-levels" type="button" class="secondary">Levels</button>
           </div>
         </div>
-        ${mobileControls}
+        <div class="touch-controls ${touchEnabled ? "" : "touch-controls-hidden"}" aria-label="Touch controls">
+          <button id="touch-left" type="button" class="touch-button" aria-label="Move left">Left</button>
+          <button id="touch-right" type="button" class="touch-button" aria-label="Move right">Right</button>
+          <button id="touch-jump" type="button" class="touch-button jump" aria-label="Jump">Jump</button>
+        </div>
       </section>
     `;
 
@@ -126,6 +125,10 @@
     }
     if (themeToggleButton) {
       themeToggleButton.addEventListener("click", options.onToggleTheme);
+    }
+    const controlsModeToggleButton = root.querySelector("#controls-mode-toggle");
+    if (controlsModeToggleButton) {
+      controlsModeToggleButton.addEventListener("click", options.onToggleControlsMode);
     }
     root.querySelector("#back-levels").addEventListener("click", options.onBackToLevels);
     root.querySelector("#outcome-primary").addEventListener("click", () => {
@@ -138,7 +141,10 @@
     return {
       canvas: root.querySelector("#game"),
       statusLabel: root.querySelector("#status"),
+      helpLabel: root.querySelector(".help"),
       themeToggleButton,
+      controlsModeToggleButton,
+      touchControlsRoot: root.querySelector(".touch-controls"),
       touchControls: {
         left: root.querySelector("#touch-left"),
         right: root.querySelector("#touch-right"),
